@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>高考倒计时</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body { height: 100%; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC",
+                 "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    min-height: 100vh;
+    min-height: 100svh;
+    background: radial-gradient(120% 80% at 50% -10%,
+                #1c2b6b 0%, #0d1338 40%, #05070f 100%) fixed;
+    color: #e8eeff;
+    display: grid;
+    place-items: center;
+    padding: 32px 18px;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ---------- 星空画布 ---------- */
+  #bg {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  /* ---------- 主体 ---------- */
+  .app {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 920px;
+    text-align: center;
+    animation: rise .9s cubic-bezier(.2, .8, .2, 1) both;
+  }
+
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(26px); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  .head {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 16px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .06);
+    border: 1px solid rgba(255, 255, 255, .12);
+    font-size: 13px;
+    letter-spacing: .12em;
+    color: #9fb3e0;
+  }
+
+  .head .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #5ee0a0;
+    box-shadow: 0 0 10px #5ee0a0;
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse { 50% { opacity: .3; } }
+
+  .title {
+    margin: 20px 0 6px;
+    font-size: clamp(26px, 5vw, 40px);
+    font-weight: 800;
+    letter-spacing: .2em;
+    text-indent: .2em;
+    background: linear-gradient(180deg, #ffffff, #b9cbff 60%, #7f9bff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* ---------- 数字区 ---------- */
+  .units {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: clamp(8px, 2vw, 18px);
+    margin-top: clamp(26px, 5vw, 44px);
+  }
+
+  .unit {
+    position: relative;
+    padding: clamp(14px, 2.4vw, 24px) 6px clamp(10px, 1.6vw, 14px);
+    border-radius: clamp(14px, 2vw, 22px);
+    background: linear-gradient(180deg,
+                rgba(255, 255, 255, .10),
+                rgba(255, 255, 255, .02) 60%,
+                rgba(255, 255, 255, .05));
+    border: 1px solid rgba(255, 255, 255, .13);
+    box-shadow: 0 24px 48px -28px rgba(0, 0, 0, .95),
+                inset 0 1px 0 rgba(255, 255, 255, .16);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    overflow: hidden;
+  }
+
+  .unit::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(80% 60% at 50% 0%,
+                rgba(120, 160, 255, .22), transparent 70%);
+    pointer-events: none;
+  }
+
+  .unit b {
+    display: block;
+    font-size: clamp(30px, 8vw, 72px);
+    line-height: 1.05;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0;
+    background: linear-gradient(180deg, #ffffff 0%, #ffe9b0 55%, #ffb44d 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    filter: drop-shadow(0 6px 18px rgba(255, 170, 60, .28));
+  }
+
+  .unit span {
+    display: block;
+    margin-top: 8px;
+    font-size: clamp(11px, 1.6vw, 13px);
+    letter-spacing: .3em;
+    text-indent: .3em;
+    color: #8fa4d6;
+  }
+
+  /* 数字翻动动画 */
+  .flip { animation: flip .45s cubic-bezier(.2, .8, .2, 1); }
+
+  @keyframes flip {
+    0%   { transform: translateY(-38%) scale(.9); opacity: 0; filter: blur(4px); }
+    100% { transform: translateY(0) scale(1);    opacity: 1; filter: blur(0); }
+  }
+
+  /* ---------- 进度条 ---------- */
+  .progress { margin-top: clamp(24px, 4vw, 38px); }
+
+  .progress-track {
+    height: 8px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .08);
+    border: 1px solid rgba(255, 255, 255, .08);
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    width: 0;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #4ea1ff, #7ce7ff 40%, #ffd166);
+    box-shadow: 0 0 18px rgba(90, 180, 255, .6);
+    transition: width 1s cubic-bezier(.2, .8, .2, 1);
+  }
+
+  .progress-meta {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 10px;
+    font-size: 12px;
+    letter-spacing: .15em;
+    color: #7e92c4;
+  }
+
+  /* ---------- 励志语 ---------- */
+  .quote {
+    margin-top: clamp(22px, 4vw, 34px);
+    min-height: 1.7em;
+    padding: 0 8px;
+    font-size: clamp(14px, 2.2vw, 17px);
+    letter-spacing: .08em;
+    color: #c6d4f7;
+    transition: opacity .4s ease;
+  }
+
+  /* ---------- 工具区 ---------- */
+  .tools {
+    margin-top: clamp(26px, 4vw, 40px);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+    align-items: center;
+    opacity: .55;
+    transition: opacity .3s;
+  }
+
+  .tools:hover, .tools:focus-within { opacity: 1; }
+
+  .date-input {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .05);
+    border: 1px solid rgba(255, 255, 255, .1);
+    font-size: 12px;
+    letter-spacing: .1em;
+    color: #7e92c4;
+  }
+
+  .date-input input {
+    background: transparent;
+    border: 0;
+    outline: none;
+    font: inherit;
+    font-size: 12px;
+    color: #c6d4f7;
+    color-scheme: dark;
+  }
+
+  button {
+    font: inherit;
+    font-size: 12px;
+    letter-spacing: .1em;
+    padding: 8px 16px;
+    border-radius: 999px;
+    cursor: pointer;
+    background: rgba(255, 255, 255, .06);
+    border: 1px solid rgba(255, 255, 255, .12);
+    color: #a9bde8;
+    transition: .25s;
+  }
+
+  button:hover {
+    background: rgba(120, 160, 255, .18);
+    border-color: rgba(140, 180, 255, .4);
+    color: #fff;
+  }
+
+  @media (max-width: 420px) {
+    body { padding: 26px 12px; }
+    .date-input span { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="bg"></canvas>
+
+<main class="app">
+  <div class="head">
+    <span class="dot"></span>
+    <span id="targetLabel">距离 2026 年高考</span>
+  </div>
+
+  <h1 class="title">高考倒计时</h1>
+
+  <div class="units">
+    <div class="unit"><b id="days">---</b><span>天</span></div>
+    <div class="unit"><b id="hours">--</b><span>时</span></div>
+    <div class="unit"><b id="minutes">--</b><span>分</span></div>
+    <div class="unit"><b id="seconds">--</b><span>秒</span></div>
+  </div>
+
+  <div class="progress">
+    <div class="progress-track">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
+    <div class="progress-meta">
+      <span>备考进度</span>
+      <span id="progressText">0%</span>
+    </div>
+  </div>
+
+  <p class="quote" id="quote">乾坤未定，你我皆是黑马。</p>
+
+  <div class="tools">
+    <label class="date-input">
+      <span>目标时间</span>
+      <input type="datetime-local" id="targetInput">
+    </label>
+    <button type="button" id="resetBtn">恢复默认</button>
+  </div>
+</main>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ================= 配置 ================= */
+  const KEY = 'gaokao-countdown-target';
+  const EXAM_MONTH = 5;   // 6 月（月份从 0 开始）
+  const EXAM_DAY = 7;     // 7 日
+  const EXAM_HOUR = 9;    // 09:00 开考
+  const SPAN_MS = 365 * 24 * 60 * 60 * 1000; // 进度条周期
+
+  const QUOTES = [
+    '乾坤未定，你我皆是黑马。',
+    '星光不问赶路人，时光不负有心人。',
+    '你只管努力，剩下的交给时间。',
+    '十年磨一剑，霜刃未曾试。',
+    '每一份努力，都在悄悄改变结局。',
+    '拼搏到无能为力，坚持到感动自己。',
+    '天道酬勤，厚积薄发。',
+    '此刻的坚持，是未来的底气。'
+  ];
+
+  /* ================= 元素 ================= */
+  const $ = id => document.getElementById(id);
+  const elDays    = $('days');
+  const elHours   = $('hours');
+  const elMinutes = $('minutes');
+  const elSeconds = $('seconds');
+  const elLabel   = $('targetLabel');
+  const elQuote   = $('quote');
+  const elFill    = $('progressFill');
+  const elPct     = $('progressText');
+  const elInput   = $('targetInput');
+  const elReset   = $('resetBtn');
+
+  /* ================= 目标时间 ================= */
+  function defaultTarget() {
+    const now = new Date();
+    let t = new Date(now.getFullYear(), EXAM_MONTH, EXAM_DAY, EXAM_HOUR, 0, 0, 0);
+    if (t.getTime() <= now.getTime()) {
+      t = new Date(now.getFullYear() + 1, EXAM_MONTH, EXAM_DAY, EXAM_HOUR, 0, 0, 0);
+    }
+    return t;
+  }
+
+  function loadStored() {
+    try {
+      const v = localStorage.getItem(KEY);
+      if (!v) return null;
+      const d = new Date(Number(v));
+      return isNaN(d.getTime()) ? null : d;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  let target = loadStored() || defaultTarget();
+
+  /* ================= 工具函数 ================= */
+  const pad = (n, len = 2) => String(n).padStart(len, '0');
+
+  function setNum(el, val) {
+    if (el.textContent === val) return;
+    el.textContent = val;
+    el.classList.remove('flip');
+    void el.offsetWidth;   // 强制重排，重启动画
+    el.classList.add('flip');
+  }
+
+  function toLocalInputValue(d) {
+    return d.getFullYear() + '-' +
+           pad(d.getMonth() + 1) + '-' +
+           pad(d.getDate()) + 'T' +
+           pad(d.getHours()) + ':' +
+           pad(d.getMinutes());
+  }
+
+  /* ================= 渲染 ================= */
+  function render() {
+    const now = Date.now();
+    let diff = target.getTime() - now;
+    if (diff < 0) diff = 0;
+
+    const totalSec = Math.floor(diff / 1000);
+    const d = Math.floor(totalSec / 86400);
+    const h = Math.floor(totalSec / 3600) % 24;
+    const m = Math.floor(totalSec / 60) % 60;
+    const s = totalSec % 60;
+
+    setNum(elDays, pad(d, 3));
+    setNum(elHours, pad(h));
+    setNum(elMinutes, pad(m));
+    setNum(elSeconds, pad(s));
+
+    /* 进度条 */
+    const startMs = target.getTime() - SPAN_MS;
+    let pct = ((now - startMs) / SPAN_MS) * 100;
+    pct = Math.max(0, Math.min(100, pct));
+    elFill.style.width = pct.toFixed(2) + '%';
+    elPct.textContent = pct.toFixed(1) + '%';
+
+    /* 标题 */
+    const year = target.getFullYear();
+    elLabel.textContent = '距离 ' + year + ' 年高考';
+
+    document.title = '距高考 ' + d + ' 天 | 高考倒计时';
+  }
+
+  /* ================= 交互 ================= */
+  elInput.value = toLocalInputValue(target);
+
+  elInput.addEventListener('change', function () {
+    const v = elInput.value;
+    if (!v) return;
+    const d = new Date(v);
+    if (isNaN(d.getTime())) return;
+    target = d;
+    try { localStorage.setItem(KEY, String(d.getTime())); } catch (e) {}
+    render();
+  });
+
+  elReset.addEventListener('click', function () {
+    target = defaultTarget();
+    try { localStorage.removeItem(KEY); } catch (e) {}
+    elInput.value = toLocalInputValue(target);
+    render();
+  });
+
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) render();
+  });
+
+  /* ================= 励志语轮播 ================= */
+  let qi = 0;
+  setInterval(function () {
+    qi = (qi + 1) % QUOTES.length;
+    elQuote.style.opacity = '0';
+    setTimeout(function () {
+      elQuote.textContent = QUOTES[qi];
+      elQuote.style.opacity = '1';
+    }, 400);
+  }, 6000);
+
+  /* ================= 星空背景 ================= */
+  const canvas = document.getElementById('bg');
+  const ctx = canvas.getContext('2d');
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  let W = 0, H = 0, DPR = 1, stars = [];
+
+  function buildStars() {
+    const count = Math.min(280, Math.round((window.innerWidth * window.innerHeight) / 7000));
+    stars = [];
+    for (let i = 0; i < count; i++) {
+      stars.push({
+        x: Math.random() * W,
+        y: Math.random() * H,
+        r: (Math.random() * 1.2 + 0.3) * DPR,
+        phase: Math.random() * Math.PI * 2,
+        speed: 0.6 + Math.random() * 1.8,
+        vy: (0.04 + Math.random() * 0.12) * DPR,
+        warm: Math.random() < 0.18
+      });
+    }
+  }
+
+  function resize() {
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    W = canvas.width  = Math.floor(window.innerWidth  * DPR);
+    H = canvas.height = Math.floor(window.innerHeight * DPR);
+    canvas.style.width  = window.innerWidth  + 'px';
+    canvas.style.height = window.innerHeight + 'px';
+    buildStars();
+    if (reduceMotion) drawStatic();
+  }
+
+  function drawStatic() {
+    ctx.clearRect(0, 0, W, H);
+    for (const st of stars) {
+      ctx.beginPath();
+      ctx.arc(st.x, st.y, st.r, 0, Math.PI * 2);
+      ctx.fillStyle = st.warm ? 'rgba(255,214,150,.7)' : 'rgba(170,200,255,.7)';
+      ctx.fill();
+    }
+  }
+
+  let lastT = 0;
+  function loop(t) {
+    if (!lastT) lastT = t;
+    const dt = Math.min((t - lastT) / 1000, 0.05);
+    lastT = t;
+
+    ctx.clearRect(0, 0, W, H);
+    for (const st of stars) {
+      st.phase += st.speed * dt;
+      st.y += st.vy * 60 * dt;
+      if (st.y > H + 4) {
+        st.y = -4;
+        st.x = Math.random() * W;
+      }
+      const a = 0.22 + 0.78 * (0.5 + 0.5 * Math.sin(st.phase));
+      ctx.beginPath();
+      ctx.arc(st.x, st.y, st.r, 0, Math.PI * 2);
+      ctx.fillStyle = st.warm
+        ? 'rgba(255,214,150,' + a.toFixed(3) + ')'
+        : 'rgba(170,200,255,' + a.toFixed(3) + ')';
+      ctx.fill();
+    }
+    requestAnimationFrame(loop);
+  }
+
+  let resizeTimer = null;
+  window.addEventListener('resize', function () {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(resize, 150);
+  });
+
+  /* ================= 启动 ================= */
+  resize();
+  if (!reduceMotion) requestAnimationFrame(loop);
+
+  render();
+  setInterval(render, 250);
+})();
+</script>
+</body>
+</html>
